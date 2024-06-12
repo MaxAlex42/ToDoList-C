@@ -11,7 +11,7 @@ int main(int argc, char *argv[]) {
     gtk_init(&argc, &argv);
 
     builder = gtk_builder_new();
-    if (gtk_builder_add_from_file(builder, "Test-Application.glade", NULL) == 0) {
+    if (gtk_builder_add_from_file(builder, "todo.glade", NULL) == 0) {
         g_printerr("Error loading file: interface.glade\n");
         return 1;
     }

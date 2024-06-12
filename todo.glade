@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Generated with glade 3.40.0 -->
+<interface>
+  <requires lib="gtk+" version="3.24"/>
+  <object class="GtkWindow" id="application">
+    <property name="can-focus">False</property>
+    <child>
+      <object class="GtkScrolledWindow" id="scrollableList">
+        <property name="visible">True</property>
+        <property name="can-focus">True</property>
+        <property name="margin-start">35</property>
+        <property name="margin-end">35</property>
+        <property name="margin-top">50</property>
+        <property name="margin-bottom">50</property>
+        <property name="shadow-type">in</property>
+        <property name="hscrollbar_policy">automatic</property>
+        <property name="vscrollbar_policy">automatic</property>
+        <child>
+          <object class="GtkTreeView" id="items_view">
+            <property name="visible">True</property>
+            <property name="can_focus">True</property>
+          </object>
+        </child>
+      </object>
+    </child>
+  </object>
+</interface>
