@@ -16,7 +16,7 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    window = GTK_WIDGET(gtk_builder_get_object(builder, "main_window"));
+    window = GTK_WIDGET(gtk_builder_get_object(builder, "application"));
     if (!window) {
         g_printerr("Unable to find object with id 'main_window'\n");
         return 1;
