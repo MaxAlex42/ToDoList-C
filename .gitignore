@@ -1,0 +1,8 @@
+# Exclude Visual Studio Code settings folder
+.vscode/
+
+# Exclude IntelliJ IDEA settings folder
+.idea/
+
+# Exclude object files
+*.o
