@@ -7,18 +7,45 @@
     <property name="title">ToDoList</property>
     <signal name="destroy" handler="on_main_window_destroy" swapped="no"/>
     <child>
-      <object class="GtkScrolledWindow" id="scrollableList">
+      <object class="GtkOverlay">
         <property name="visible">True</property>
         <property name="can-focus">True</property>
-        <property name="margin-start">35</property>
-        <property name="margin-end">35</property>
-        <property name="margin-top">50</property>
-        <property name="margin-bottom">50</property>
-        <property name="shadow-type">in</property>
         <child>
-          <object class="GtkTreeView" id="items_view">
+          <object class="GtkScrolledWindow" id="scrollableList">
             <property name="visible">True</property>
             <property name="can-focus">True</property>
+            <property name="margin-start">35</property>
+            <property name="margin-end">35</property>
+            <property name="margin-top">50</property>
+            <property name="margin-bottom">50</property>
+            <property name="shadow-type">in</property>
+            <child>
+              <object class="GtkTreeView" id="items_view">
+                <property name="visible">True</property>
+                <property name="can-focus">True</property>
+              </object>
+            </child>
+          </object>
+        </child>
+        <child type="overlay">
+          <object class="GtkButton" id="floating_button">
+            <property name="visible">True</property>
+            <property name="can-focus">True</property>
+            <property name="halign">end</property>
+            <property name="valign">end</property>
+            <property name="width-request">55</property>
+            <property name="height-request">55</property>
+            <style>
+              <class name="circular"/>
+            </style>
+            <child>
+              <object class="GtkLabel">
+                <property name="label">+</property>
+                <attributes>
+                  <attribute name="scale" value="2.0"/>
+                </attributes>
+              </object>
+            </child>
           </object>
         </child>
       </object>

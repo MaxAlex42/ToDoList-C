@@ -8,6 +8,7 @@ enum
 {
     COLUMN_DONE,
     COLUMN_TASK,
+    COLUMN_DUE,
     NUM_COLUMNS
 };
 
@@ -18,13 +19,14 @@ void on_main_window_destroy()
 }
 
 // Function to add a new todo item to the GtkListStore
-void add_todo_item(GtkListStore *list, gboolean done, const gchar *task)
+void add_todo_item(GtkListStore *list, gboolean done, const gchar *task, const gchar *due)
 {
     GtkTreeIter iter;                     // Iterator to access the row in the List
     gtk_list_store_append(list, &iter);   // Adds a new row to the GtkListStore and sets iter to that row
     gtk_list_store_set(list, &iter,       // Set Values in the row where iter points to
                        COLUMN_DONE, done, // Sets the "done" status
                        COLUMN_TASK, task, // Sets the task description
+                       COLUMN_DUE, due,   // Sets the due date of the task
                        -1);               // Marks the end of the variable arguments list
 }
 
@@ -84,7 +86,7 @@ int main(int argc, char *argv[])
     tree_view = GTK_TREE_VIEW(gtk_builder_get_object(builder, "items_view")); // Gets the TreeView object from the builder
 
     // Creates a new GtkListStore with two columns: one for booleans and one for strings
-    list_store = gtk_list_store_new(NUM_COLUMNS, G_TYPE_BOOLEAN, G_TYPE_STRING);
+    list_store = gtk_list_store_new(NUM_COLUMNS, G_TYPE_BOOLEAN, G_TYPE_STRING, G_TYPE_STRING);
 
     /*
         Sets the model for the TreeView meaning that the TreeView will use the list_store as it's "data model"
@@ -103,9 +105,14 @@ int main(int argc, char *argv[])
     column = gtk_tree_view_column_new_with_attributes("Task", renderer, "text", COLUMN_TASK, NULL); // Creates a new column with the text renderer
     gtk_tree_view_append_column(tree_view, column);                                                 // Adds the column to the TreeView
 
+    // Add the due column
+    renderer = gtk_cell_renderer_text_new();
+    column = gtk_tree_view_column_new_with_attributes("Due", renderer, "text", COLUMN_DUE, NULL);
+    gtk_tree_view_append_column(tree_view, column);
+
     // Add sample todos
-    add_todo_item(list_store, FALSE, "Philipp");
-    add_todo_item(list_store, FALSE, "Max");
+    add_todo_item(list_store, FALSE, "Projekt für Programming in C", "July 1, 7:30");
+    add_todo_item(list_store, FALSE, "Abgabe für Programming in C vorbereiten", "July 1, 19:00");
 
     gtk_widget_show_all(window); // Shows the main window and all its child widgets
 
