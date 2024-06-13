@@ -7,43 +7,68 @@
     <property name="title">ToDoList</property>
     <signal name="destroy" handler="on_main_window_destroy" swapped="no"/>
     <child>
-      <object class="GtkOverlay">
+      <object class="GtkBox">
+        <property name="orientation">vertical</property>
         <property name="visible">True</property>
         <property name="can-focus">True</property>
         <child>
-          <object class="GtkScrolledWindow" id="scrollableList">
+          <object class="GtkCheckButton" id="radio_button">
             <property name="visible">True</property>
             <property name="can-focus">True</property>
-            <property name="margin-start">35</property>
-            <property name="margin-end">35</property>
-            <property name="margin-top">50</property>
-            <property name="margin-bottom">50</property>
-            <property name="shadow-type">in</property>
+            <property name="margin-left">35</property>
+            <property name="margin-top">35</property>
             <child>
-              <object class="GtkTreeView" id="items_view">
-                <property name="visible">True</property>
-                <property name="can-focus">True</property>
+              <object class="GtkLabel">
+                <property name="label">Show Done Todos Only</property>
+                <attributes>
+                  <attribute name="weight" value="bold"/>
+                  <attribute name="scale" value="1.5"/>
+                </attributes>
               </object>
             </child>
           </object>
         </child>
-        <child type="overlay">
-          <object class="GtkButton" id="floating_button">
+        <child>
+          <object class="GtkOverlay">
             <property name="visible">True</property>
             <property name="can-focus">True</property>
-            <property name="halign">end</property>
-            <property name="valign">end</property>
-            <property name="width-request">55</property>
-            <property name="height-request">55</property>
-            <style>
-              <class name="circular"/>
-            </style>
             <child>
-              <object class="GtkLabel">
-                <property name="label">+</property>
-                <attributes>
-                  <attribute name="scale" value="2.0"/>
-                </attributes>
+              <object class="GtkScrolledWindow" id="scrollableList">
+                <property name="visible">True</property>
+                <property name="can-focus">True</property>
+                <property name="margin-start">35</property>
+                <property name="margin-end">35</property>
+                <property name="margin-top">50</property>
+                <property name="margin-bottom">50</property>
+                <property name="height-request">500</property>
+                <property name="shadow-type">in</property>
+                <child>
+                  <object class="GtkTreeView" id="items_view">
+                    <property name="visible">True</property>
+                    <property name="can-focus">True</property>
+                  </object>
+                </child>
+              </object>
+            </child>
+            <child type="overlay">
+              <object class="GtkButton" id="floating_button">
+                <property name="visible">True</property>
+                <property name="can-focus">True</property>
+                <property name="halign">end</property>
+                <property name="valign">end</property>
+                <property name="width-request">55</property>
+                <property name="height-request">55</property>
+                <style>
+                  <class name="circular"/>
+                </style>
+                <child>
+                  <object class="GtkLabel">
+                    <property name="label">+</property>
+                    <attributes>
+                      <attribute name="scale" value="2.0"/>
+                    </attributes>
+                  </object>
+                </child>
               </object>
             </child>
           </object>

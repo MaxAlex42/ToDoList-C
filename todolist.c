@@ -30,6 +30,10 @@ void add_todo_item(GtkListStore *list, gboolean done, const gchar *task, const g
                        -1);               // Marks the end of the variable arguments list
 }
 
+void remove_todo_item()
+{
+}
+
 /*
     Callback function for the "toggled" signal of the GtkCellRendererToggle.
     In easier words ... this is the function that gets executed, if someone clicks a
@@ -79,7 +83,7 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    gtk_window_set_default_size(GTK_WINDOW(window), 800, 600); // Sets the default size of the window to 800x600
+    gtk_window_set_default_size(GTK_WINDOW(window), 1000, 800); // Sets the default size of the window to 800x600
 
     gtk_builder_connect_signals(builder, NULL); // Connects the signal handlers defined in the Glade file
 
