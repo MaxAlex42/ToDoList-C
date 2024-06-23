@@ -12,6 +12,11 @@ enum
     NUM_COLUMNS
 };
 
+// Global variables
+GtkWidget *checkbox;           // Checkbox to filter completed todos
+GtkListStore *unfinished_list; // ListStore for unfinished tasks
+GtkListStore *finished_list;   // ListStore for finished tasks
+
 // Callback function for the "destroy" signal of the main window
 void on_main_window_destroy()
 {
@@ -30,30 +35,60 @@ void add_todo_item(GtkListStore *list, gboolean done, const gchar *task, const g
                        -1);               // Marks the end of the variable arguments list
 }
 
-void remove_todo_item()
+// Callback function for the "toggled" signal of the checkbox
+void on_checkbox_toggled(GtkToggleButton *toggle_button, gpointer user_data)
 {
+    GtkTreeView *tree_view = GTK_TREE_VIEW(user_data);
+    gboolean show_done_only = gtk_toggle_button_get_active(toggle_button);
+
+    if (show_done_only)
+    {
+        gtk_tree_view_set_model(tree_view, GTK_TREE_MODEL(finished_list));
+    }
+    else
+    {
+        gtk_tree_view_set_model(tree_view, GTK_TREE_MODEL(unfinished_list));
+    }
 }
 
 /*
     Callback function for the "toggled" signal of the GtkCellRendererToggle.
-    In easier words ... this is the function that gets executed, if someone clicks a
-    checkbox
+    This is the function that gets executed if someone clicks a checkbox
 */
 void on_toggled(GtkCellRendererToggle *renderer, gchar *path, gpointer user_data)
 {
-    GtkListStore *store = GTK_LIST_STORE(user_data);
+    GtkTreeView *tree_view = GTK_TREE_VIEW(user_data);
+    GtkTreeModel *model = gtk_tree_view_get_model(tree_view);
+    GtkListStore *store = GTK_LIST_STORE(model);
     GtkTreeIter iter;
     gboolean active;
 
     // Gets the GtkTreeIter corresponding to the given path
-    gtk_tree_model_get_iter_from_string(GTK_TREE_MODEL(store), &iter, path);
+    gtk_tree_model_get_iter_from_string(model, &iter, path);
     // Gets the current value of the "done" column
-    gtk_tree_model_get(GTK_TREE_MODEL(store), &iter, COLUMN_DONE, &active, -1);
+    gtk_tree_model_get(model, &iter, COLUMN_DONE, &active, -1);
 
     // Toggles the "done" status
     active = !active;
     // Updates the "done" status in the GtkListStore
     gtk_list_store_set(store, &iter, COLUMN_DONE, active, -1);
+
+    // Move the task to the appropriate list store
+    gchar *task;
+    gchar *due;
+    gtk_tree_model_get(model, &iter, COLUMN_TASK, &task, COLUMN_DUE, &due, -1);
+    if (active)
+    {
+        add_todo_item(finished_list, active, task, due);
+        gtk_list_store_remove(store, &iter);
+    }
+    else
+    {
+        add_todo_item(unfinished_list, active, task, due);
+        gtk_list_store_remove(store, &iter);
+    }
+    g_free(task);
+    g_free(due);
 }
 
 // Main function
@@ -62,7 +97,6 @@ int main(int argc, char *argv[])
     GtkBuilder *builder;       // Builder object to load the UI from the Glade file
     GtkWidget *window;         // Main application window
     GtkTreeView *tree_view;    // TreeView to display the todo list
-    GtkListStore *list_store;  // ListStore to hold the todos
     GtkTreeViewColumn *column; // Variable for the columns in the TreeView
     GtkCellRenderer *renderer; // Variable for the cell renderers
 
@@ -89,18 +123,16 @@ int main(int argc, char *argv[])
 
     tree_view = GTK_TREE_VIEW(gtk_builder_get_object(builder, "items_view")); // Gets the TreeView object from the builder
 
-    // Creates a new GtkListStore with two columns: one for booleans and one for strings
-    list_store = gtk_list_store_new(NUM_COLUMNS, G_TYPE_BOOLEAN, G_TYPE_STRING, G_TYPE_STRING);
+    // Creates two new GtkListStores: one for unfinished tasks and one for finished tasks
+    unfinished_list = gtk_list_store_new(NUM_COLUMNS, G_TYPE_BOOLEAN, G_TYPE_STRING, G_TYPE_STRING);
+    finished_list = gtk_list_store_new(NUM_COLUMNS, G_TYPE_BOOLEAN, G_TYPE_STRING, G_TYPE_STRING);
 
-    /*
-        Sets the model for the TreeView meaning that the TreeView will use the list_store as it's "data model"
-    */
-    gtk_tree_view_set_model(tree_view, GTK_TREE_MODEL(list_store));
-    // g_object_unref(list_store);                                     // Decreases the reference count of the list store (really nessecary?)
+    // Initially set the tree view model to the unfinished tasks list
+    gtk_tree_view_set_model(tree_view, GTK_TREE_MODEL(unfinished_list));
 
     // Add the checkbox column
     renderer = gtk_cell_renderer_toggle_new();                                                        // Creates a new toggle cell renderer
-    g_signal_connect(renderer, "toggled", G_CALLBACK(on_toggled), list_store);                        // Connects the "toggled" signal to the callback function
+    g_signal_connect(renderer, "toggled", G_CALLBACK(on_toggled), tree_view);                         // Connects the "toggled" signal to the callback function
     column = gtk_tree_view_column_new_with_attributes("Done", renderer, "active", COLUMN_DONE, NULL); // Creates a new column with the toggle renderer
     gtk_tree_view_append_column(tree_view, column);                                                   // Adds the column to the TreeView
 
@@ -115,8 +147,21 @@ int main(int argc, char *argv[])
     gtk_tree_view_append_column(tree_view, column);
 
     // Add sample todos
-    add_todo_item(list_store, FALSE, "Projekt für Programming in C", "July 1, 7:30");
-    add_todo_item(list_store, FALSE, "Abgabe für Programming in C vorbereiten", "July 1, 19:00");
+    add_todo_item(unfinished_list, FALSE, "Projekt für Programming in C", "July 1, 7:30");
+    add_todo_item(unfinished_list, FALSE, "Abgabe für Programming in C vorbereiten", "July 1, 19:00");
+
+    // Get the checkbox and connect its toggled signal
+    checkbox = GTK_WIDGET(gtk_builder_get_object(builder, "radio_button"));
+    if (!checkbox)
+    {
+        g_printerr("Unable to find object with id 'radio_button'\n");
+        return 1;
+    }
+    else
+    {
+        g_print("Checkbox found: %p\n", checkbox); // Debug statement
+    }
+    g_signal_connect(checkbox, "toggled", G_CALLBACK(on_checkbox_toggled), tree_view);
 
     gtk_widget_show_all(window); // Shows the main window and all its child widgets
 
