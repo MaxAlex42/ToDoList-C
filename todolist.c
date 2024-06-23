@@ -1,4 +1,7 @@
 #include <gtk/gtk.h>
+#include <jansson.h>
+#include <time.h>
+#include <unistd.h>
 
 /*
     Enum to define the columns in the GtkListStore (ListView)
@@ -12,14 +15,22 @@ enum
     NUM_COLUMNS
 };
 
+// Function declarations
+void save_tasks();
+void load_tasks();
+
 // Global variables
 GtkWidget *checkbox;           // Checkbox to filter completed todos
 GtkListStore *unfinished_list; // ListStore for unfinished tasks
 GtkListStore *finished_list;   // ListStore for finished tasks
+GtkBuilder *builder;           // Builder object to load the UI from the Glade file
+
+#define DATA_FILE "tasks.json"
 
 // Callback function for the "destroy" signal of the main window
 void on_main_window_destroy()
 {
+    save_tasks();    // Save tasks before quitting the app
     gtk_main_quit(); // Quits the app
 }
 
@@ -91,10 +102,148 @@ void on_toggled(GtkCellRendererToggle *renderer, gchar *path, gpointer user_data
     g_free(due);
 }
 
-// Main function
+// Function to handle the response of the task window buttons
+void on_task_ok_button_clicked(GtkButton *button, gpointer user_data)
+{
+    // Get the task name and due date from the window
+    GtkWidget *task_name_entry = GTK_WIDGET(gtk_builder_get_object(builder, "task_name_entry"));
+    GtkWidget *due_date_calendar = GTK_WIDGET(gtk_builder_get_object(builder, "due_date_calendar"));
+
+    const gchar *task_name = gtk_entry_get_text(GTK_ENTRY(task_name_entry));
+
+    guint year, month, day;
+    gtk_calendar_get_date(GTK_CALENDAR(due_date_calendar), &year, &month, &day);
+
+    gchar due_date[256];
+    snprintf(due_date, sizeof(due_date), "%04u-%02u-%02u", year, month + 1, day);
+
+    // Add the new task to the unfinished list
+    add_todo_item(unfinished_list, FALSE, task_name, due_date);
+
+    GtkWidget *task_window = GTK_WIDGET(gtk_builder_get_object(builder, "task_window"));
+    gtk_widget_hide(task_window);
+}
+
+void on_task_cancel_button_clicked(GtkButton *button, gpointer user_data)
+{
+    GtkWidget *task_window = GTK_WIDGET(gtk_builder_get_object(builder, "task_window"));
+    gtk_widget_hide(task_window);
+}
+
+// Function to show the task window
+void on_floating_button_clicked(GtkButton *button, gpointer user_data)
+{
+    GtkWidget *task_window = GTK_WIDGET(gtk_builder_get_object(builder, "task_window"));
+
+    // Reset the task name entry
+    GtkWidget *task_name_entry = GTK_WIDGET(gtk_builder_get_object(builder, "task_name_entry"));
+    gtk_entry_set_text(GTK_ENTRY(task_name_entry), "");
+
+    // Reset the calendar to the current date
+    GtkWidget *due_date_calendar = GTK_WIDGET(gtk_builder_get_object(builder, "due_date_calendar"));
+    GDateTime *now = g_date_time_new_now_local();
+    gtk_calendar_select_month(GTK_CALENDAR(due_date_calendar), g_date_time_get_month(now) - 1, g_date_time_get_year(now));
+    gtk_calendar_select_day(GTK_CALENDAR(due_date_calendar), g_date_time_get_day_of_month(now));
+    g_date_time_unref(now);
+
+    gtk_widget_show_all(task_window);
+}
+
+// Function to save the tasks to a JSON file
+void save_tasks()
+{
+    json_t *root = json_object();
+    json_t *unfinished_tasks = json_array();
+    json_t *finished_tasks = json_array();
+    GtkTreeIter iter;
+
+    // Save unfinished tasks
+    gboolean valid = gtk_tree_model_get_iter_first(GTK_TREE_MODEL(unfinished_list), &iter);
+    while (valid)
+    {
+        gboolean done;
+        gchar *task;
+        gchar *due;
+        gtk_tree_model_get(GTK_TREE_MODEL(unfinished_list), &iter,
+                           COLUMN_DONE, &done,
+                           COLUMN_TASK, &task,
+                           COLUMN_DUE, &due,
+                           -1);
+        json_t *task_obj = json_object();
+        json_object_set_new(task_obj, "done", json_boolean(done));
+        json_object_set_new(task_obj, "task", json_string(task));
+        json_object_set_new(task_obj, "due", json_string(due));
+        json_array_append_new(unfinished_tasks, task_obj);
+        g_free(task);
+        g_free(due);
+        valid = gtk_tree_model_iter_next(GTK_TREE_MODEL(unfinished_list), &iter);
+    }
+    json_object_set_new(root, "unfinished_tasks", unfinished_tasks);
+
+    // Save finished tasks
+    valid = gtk_tree_model_get_iter_first(GTK_TREE_MODEL(finished_list), &iter);
+    while (valid)
+    {
+        gboolean done;
+        gchar *task;
+        gchar *due;
+        gtk_tree_model_get(GTK_TREE_MODEL(finished_list), &iter,
+                           COLUMN_DONE, &done,
+                           COLUMN_TASK, &task,
+                           COLUMN_DUE, &due,
+                           -1);
+        json_t *task_obj = json_object();
+        json_object_set_new(task_obj, "done", json_boolean(done));
+        json_object_set_new(task_obj, "task", json_string(task));
+        json_object_set_new(task_obj, "due", json_string(due));
+        json_array_append_new(finished_tasks, task_obj);
+        g_free(task);
+        g_free(due);
+        valid = gtk_tree_model_iter_next(GTK_TREE_MODEL(finished_list), &iter);
+    }
+    json_object_set_new(root, "finished_tasks", finished_tasks);
+
+    // Save to file
+    json_dump_file(root, DATA_FILE, JSON_INDENT(2));
+    json_decref(root);
+}
+
+// Function to load tasks from a JSON file
+void load_tasks()
+{
+    json_error_t error;
+    json_t *root = json_load_file(DATA_FILE, 0, &error);
+    if (!root)
+    {
+        g_warning("Unable to load tasks from file: %s", error.text);
+        return;
+    }
+
+    json_t *unfinished_tasks = json_object_get(root, "unfinished_tasks");
+    for (size_t i = 0; i < json_array_size(unfinished_tasks); i++)
+    {
+        json_t *task_obj = json_array_get(unfinished_tasks, i);
+        gboolean done = json_boolean_value(json_object_get(task_obj, "done"));
+        const gchar *task = json_string_value(json_object_get(task_obj, "task"));
+        const gchar *due = json_string_value(json_object_get(task_obj, "due"));
+        add_todo_item(unfinished_list, done, task, due);
+    }
+
+    json_t *finished_tasks = json_object_get(root, "finished_tasks");
+    for (size_t i = 0; i < json_array_size(finished_tasks); i++)
+    {
+        json_t *task_obj = json_array_get(finished_tasks, i);
+        gboolean done = json_boolean_value(json_object_get(task_obj, "done"));
+        const gchar *task = json_string_value(json_object_get(task_obj, "task"));
+        const gchar *due = json_string_value(json_object_get(task_obj, "due"));
+        add_todo_item(finished_list, done, task, due);
+    }
+
+    json_decref(root);
+}
+
 int main(int argc, char *argv[])
 {
-    GtkBuilder *builder;       // Builder object to load the UI from the Glade file
     GtkWidget *window;         // Main application window
     GtkTreeView *tree_view;    // TreeView to display the todo list
     GtkTreeViewColumn *column; // Variable for the columns in the TreeView
@@ -117,11 +266,16 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    gtk_window_set_default_size(GTK_WINDOW(window), 1000, 800); // Sets the default size of the window to 800x600
+    gtk_window_set_default_size(GTK_WINDOW(window), 1000, 800); // Sets the default size of the window to 1000x800
 
     gtk_builder_connect_signals(builder, NULL); // Connects the signal handlers defined in the Glade file
 
     tree_view = GTK_TREE_VIEW(gtk_builder_get_object(builder, "items_view")); // Gets the TreeView object from the builder
+    if (!tree_view)
+    {
+        g_printerr("Unable to find object with id 'items_view'\n");
+        return 1;
+    }
 
     // Creates two new GtkListStores: one for unfinished tasks and one for finished tasks
     unfinished_list = gtk_list_store_new(NUM_COLUMNS, G_TYPE_BOOLEAN, G_TYPE_STRING, G_TYPE_STRING);
@@ -146,22 +300,25 @@ int main(int argc, char *argv[])
     column = gtk_tree_view_column_new_with_attributes("Due", renderer, "text", COLUMN_DUE, NULL);
     gtk_tree_view_append_column(tree_view, column);
 
-    // Add sample todos
-    add_todo_item(unfinished_list, FALSE, "Projekt für Programming in C", "July 1, 7:30");
-    add_todo_item(unfinished_list, FALSE, "Abgabe für Programming in C vorbereiten", "July 1, 19:00");
+    // Load tasks from the file
+    load_tasks();
 
     // Get the checkbox and connect its toggled signal
     checkbox = GTK_WIDGET(gtk_builder_get_object(builder, "radio_button"));
-    if (!checkbox)
-    {
-        g_printerr("Unable to find object with id 'radio_button'\n");
-        return 1;
-    }
-    else
-    {
-        g_print("Checkbox found: %p\n", checkbox); // Debug statement
-    }
     g_signal_connect(checkbox, "toggled", G_CALLBACK(on_checkbox_toggled), tree_view);
+
+    // Connect the floating button signal to show the task window
+    GtkWidget *floating_button = GTK_WIDGET(gtk_builder_get_object(builder, "floating_button"));
+    g_signal_connect(floating_button, "clicked", G_CALLBACK(on_floating_button_clicked), NULL);
+
+    // Connect the task window buttons
+    GtkWidget *task_ok_button = GTK_WIDGET(gtk_builder_get_object(builder, "task_ok_button"));
+    g_signal_connect(task_ok_button, "clicked", G_CALLBACK(on_task_ok_button_clicked), NULL);
+
+    GtkWidget *task_cancel_button = GTK_WIDGET(gtk_builder_get_object(builder, "task_cancel_button"));
+    g_signal_connect(task_cancel_button, "clicked", G_CALLBACK(on_task_cancel_button_clicked), NULL);
+
+    g_signal_connect(window, "destroy", G_CALLBACK(on_main_window_destroy), NULL);
 
     gtk_widget_show_all(window); // Shows the main window and all its child widgets
 

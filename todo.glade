@@ -2,6 +2,7 @@
 <!-- Generated with glade 3.40.0 -->
 <interface>
   <requires lib="gtk+" version="3.24"/>
+  
   <object class="GtkWindow" id="application">
     <property name="can-focus">False</property>
     <property name="title">ToDoList</property>
@@ -76,4 +77,48 @@
       </object>
     </child>
   </object>
+  
+  <object class="GtkWindow" id="task_window">
+    <property name="title">Add New Task</property>
+    <property name="modal">true</property>
+    <property name="visible">false</property>
+    <property name="default-width">300</property>
+    <property name="default-height">200</property>
+    <child>
+      <object class="GtkBox">
+        <property name="orientation">vertical</property>
+        <property name="spacing">10</property>
+        <property name="margin">10</property>
+        <child>
+          <object class="GtkEntry" id="task_name_entry">
+            <property name="placeholder-text">Task Name</property>
+            <property name="visible">True</property>
+          </object>
+        </child>
+        <child>
+          <object class="GtkCalendar" id="due_date_calendar">
+            <property name="visible">True</property>
+          </object>
+        </child>
+        <child>
+          <object class="GtkButtonBox">
+            <property name="layout-style">end</property>
+            <child>
+              <object class="GtkButton" id="task_ok_button">
+                <property name="label">OK</property>
+                <property name="visible">True</property>
+              </object>
+            </child>
+            <child>
+              <object class="GtkButton" id="task_cancel_button">
+                <property name="label">Cancel</property>
+                <property name="visible">True</property>
+              </object>
+            </child>
+          </object>
+        </child>
+      </object>
+    </child>
+  </object>
+
 </interface>
