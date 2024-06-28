@@ -23,6 +23,12 @@
       "task": "Projekt für Programming in C",
       "due": "2024-07-01",
       "description": "Projekt für Programming in C vorbereiten"
+    },
+    {
+      "done": false,
+      "task": "Test",
+      "due": "2024-06-29",
+      "description": "Test"
     }
   ],
   "finished_tasks": []
