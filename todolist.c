@@ -32,10 +32,12 @@ void save_tasks();
 void load_tasks();
 
 // Global variables
-GtkWidget *checkbox;           // Checkbox to filter completed todos
-GtkListStore *unfinished_list; // ListStore for unfinished tasks
+GtkWidget *checkbox;               // Checkbox to filter completed todos  
+GtkWidget *edit_button;           //  Button to edit a todo                  
+GtkWidget *delete_button;        //   Button to delete a todo
+GtkListStore *unfinished_list;  // ListStore for unfinished tasks
 GtkListStore *finished_list;   // ListStore for finished tasks
-GtkBuilder *builder;           // Builder object to load the UI from the Glade file
+GtkBuilder *builder;          // Builder object to load the UI from the Glade file
 
 
 // Callback function for the "destroy" signal of the main window
@@ -43,6 +45,84 @@ void EXPORT on_main_window_destroy()
 {
     save_tasks();    // Save tasks before quitting the app
     gtk_main_quit(); // Quits the app
+}
+
+gboolean get_selected_task(GtkTreeView *tree_view, GtkTreeModel **model, GtkTreeIter *iter)
+{
+    GtkTreeSelection *selection = gtk_tree_view_get_selection(tree_view);
+    if (gtk_tree_selection_get_selected(selection, model, iter)) {
+        return TRUE;
+    }
+    return FALSE;
+}
+
+void EXPORT on_update_cancel_button_clicked()
+{
+    GtkWidget *update_task_window = GTK_WIDGET(gtk_builder_get_object(builder, "update_task_window"));
+    gtk_widget_hide(update_task_window);
+}
+
+void EXPORT on_update_button_clicked(GtkButton *button, gpointer user_data)
+{
+    GtkWidget *task_name_entry = GTK_WIDGET(gtk_builder_get_object(builder, "update_task_name_entry"));
+    GtkWidget *due_date_calendar = GTK_WIDGET(gtk_builder_get_object(builder, "update_due_date_calendar"));
+    GtkWidget *description_view = GTK_WIDGET(gtk_builder_get_object(builder, "update_task_description_entry"));
+
+    GtkWidget *update_task_window = GTK_WIDGET(gtk_builder_get_object(builder, "update_task_window"));
+    gtk_widget_hide(update_task_window);
+}
+
+void EXPORT on_edit_button_clicked(GtkButton *button, gpointer user_data)
+{
+    GtkTreeView *tree_view = GTK_TREE_VIEW(user_data);
+    GtkTreeModel *model;
+    GtkTreeIter iter;
+
+    if (!get_selected_task(tree_view, &model, &iter)) {
+        return; // No task selected
+    }
+
+    gchar *task;
+    gchar *due;
+    gchar *description;
+    gtk_tree_model_get(model, &iter, COLUMN_TASK, &task, COLUMN_DUE, &due, COLUMN_DESCRIPTION, &description, -1);
+
+    GtkWidget *task_window = GTK_WIDGET(gtk_builder_get_object(builder, "update_task_window"));
+
+    GtkWidget *task_name_entry = GTK_WIDGET(gtk_builder_get_object(builder, "update_task_name_entry"));
+    gtk_entry_set_text(GTK_ENTRY(task_name_entry), task);
+
+    GtkWidget *due_date_calendar = GTK_WIDGET(gtk_builder_get_object(builder, "update_due_date_calendar"));
+    guint year, month, day;
+    sscanf(due, "%u-%u-%u", &year, &month, &day);
+    gtk_calendar_select_month(GTK_CALENDAR(due_date_calendar), month - 1, year);
+    gtk_calendar_select_day(GTK_CALENDAR(due_date_calendar), day);
+
+    GtkWidget *description_view = GTK_WIDGET(gtk_builder_get_object(builder, "update_task_description_entry"));
+    GtkTextBuffer *buffer = gtk_text_view_get_buffer(GTK_TEXT_VIEW(description_view));
+    gtk_text_buffer_set_text(buffer, description, -1);
+
+    g_free(task);
+    g_free(due);
+    g_free(description);
+
+    gtk_widget_show_all(task_window);
+}
+
+void EXPORT on_delete_button_clicked(GtkButton *button, gpointer user_data)
+{
+    GtkTreeView *tree_view = GTK_TREE_VIEW(user_data);
+    GtkTreeModel *model;
+    GtkTreeIter iter;
+
+    if (get_selected_task(tree_view, &model, &iter)) {
+        gtk_list_store_remove(GTK_LIST_STORE(model), &iter);
+    }
+}
+
+void update_todo_item(GtkListStore *list, gboolean done, const gchar *task, const gchar *due, const gchar *description) 
+{
+
 }
 
 // Function to add a new todo item to the GtkListStore
@@ -129,9 +209,7 @@ void EXPORT on_toggled(GtkCellRendererToggle *renderer, gchar *path, gpointer us
 }
 
 // Function to handle the response of the task window buttons
-void EXPORT on_task_ok_button_clicked(GtkButton *button, gpointer user_data)
-{
-    // Get the task name and due date from the window
+void EXPORT on_task_ok_button_clicked(GtkButton *button, gpointer user_data) {
     GtkWidget *task_name_entry = GTK_WIDGET(gtk_builder_get_object(builder, "task_name_entry"));
     GtkWidget *due_date_calendar = GTK_WIDGET(gtk_builder_get_object(builder, "due_date_calendar"));
     GtkWidget *description_view = GTK_WIDGET(gtk_builder_get_object(builder, "task_description_entry"));
@@ -149,8 +227,17 @@ void EXPORT on_task_ok_button_clicked(GtkButton *button, gpointer user_data)
     gtk_text_buffer_get_bounds(buffer, &start, &end);
     gchar *description = gtk_text_buffer_get_text(buffer, &start, &end, FALSE);
 
-    // Add the new task to the unfinished list
-    add_todo_item(unfinished_list, FALSE, task_name, due_date, description);
+    GtkTreeModel *model;
+    GtkTreeIter iter;
+    if (get_selected_task(GTK_TREE_VIEW(user_data), &model, &iter)) {
+        gtk_list_store_set(GTK_LIST_STORE(model), &iter,
+                           COLUMN_TASK, task_name,
+                           COLUMN_DUE, due_date,
+                           COLUMN_DESCRIPTION, description,
+                           -1);
+    } else {
+        add_todo_item(unfinished_list, FALSE, task_name, due_date, description);
+    }
 
     GtkWidget *task_window = GTK_WIDGET(gtk_builder_get_object(builder, "task_window"));
     gtk_widget_hide(task_window);
@@ -188,12 +275,14 @@ void EXPORT on_floating_button_clicked(GtkButton *button, gpointer user_data) {
     // Connect the "insert-text" signal to the buffer
     g_signal_connect(buffer, "insert-text", G_CALLBACK(on_insert_text), NULL);
 
+    // Clear the description buffer
+    gtk_text_buffer_set_text(buffer, "", -1);
+
     gtk_widget_show_all(task_window);
 }
 
 // Function to save the tasks to a JSON file
-void save_tasks()
-{
+void save_tasks() {
     json_t *root = json_object();
     json_t *unfinished_tasks = json_array();
     json_t *finished_tasks = json_array();
@@ -201,8 +290,7 @@ void save_tasks()
 
     // Save unfinished tasks
     gboolean valid = gtk_tree_model_get_iter_first(GTK_TREE_MODEL(unfinished_list), &iter);
-    while (valid)
-    {
+    while (valid) {
         gboolean done;
         gchar *task;
         gchar *due;
@@ -228,8 +316,7 @@ void save_tasks()
 
     // Save finished tasks
     valid = gtk_tree_model_get_iter_first(GTK_TREE_MODEL(finished_list), &iter);
-    while (valid)
-    {
+    while (valid) {
         gboolean done;
         gchar *task;
         gchar *due;
@@ -254,7 +341,9 @@ void save_tasks()
     json_object_set_new(root, "finished_tasks", finished_tasks);
 
     // Save to file
-    json_dump_file(root, DATA_FILE, JSON_INDENT(2));
+    if (json_dump_file(root, "tasks.json", JSON_INDENT(2)) != 0) {
+    g_warning("Failed to save tasks to file");
+    }
     json_decref(root);
 }
 
@@ -360,6 +449,19 @@ int main(int argc, char *argv[])
     // Get the checkbox and connect its toggled signal
     checkbox = GTK_WIDGET(gtk_builder_get_object(builder, "radio_button"));
     g_signal_connect(checkbox, "toggled", G_CALLBACK(on_checkbox_toggled), tree_view);
+
+    // Connect the edit Button with its window
+    GtkWidget *edit_button = GTK_WIDGET(gtk_builder_get_object(builder, "edit_button"));
+    g_signal_connect(edit_button, "clicked", G_CALLBACK(on_edit_button_clicked), tree_view);
+
+    GtkWidget *update_button = GTK_WIDGET(gtk_builder_get_object(builder, "update_task_button"));
+    g_signal_connect(update_button, "clicked", G_CALLBACK(on_edit_button_clicked), tree_view);
+
+    GtkWidget *update_cancel_button = GTK_WIDGET(gtk_builder_get_object(builder, "update_task_cancel_button"));
+    g_signal_connect(update_cancel_button, "clicked", G_CALLBACK(on_update_button_clicked), tree_view);
+
+    GtkWidget *delete_button = GTK_WIDGET(gtk_builder_get_object(builder, "delete_button"));
+    g_signal_connect(delete_button, "clicked", G_CALLBACK(on_delete_button_clicked), tree_view);
 
     // Connect the floating button signal to show the task window
     GtkWidget *floating_button = GTK_WIDGET(gtk_builder_get_object(builder, "floating_button"));
