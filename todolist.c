@@ -39,6 +39,10 @@ GtkListStore *unfinished_list;  // ListStore for unfinished tasks
 GtkListStore *finished_list;   // ListStore for finished tasks
 GtkBuilder *builder;          // Builder object to load the UI from the Glade file
 
+gboolean hide_on_delete(GtkWidget *widget, GdkEvent *event, gpointer data) {
+    gtk_widget_hide(widget);
+    return TRUE;
+}
 
 // Callback function for the "destroy" signal of the main window
 void EXPORT on_main_window_destroy()
@@ -56,13 +60,47 @@ gboolean get_selected_task(GtkTreeView *tree_view, GtkTreeModel **model, GtkTree
     return FALSE;
 }
 
-void EXPORT on_update_cancel_button_clicked()
-{
-    GtkWidget *update_task_window = GTK_WIDGET(gtk_builder_get_object(builder, "update_task_window"));
-    gtk_widget_hide(update_task_window);
+void EXPORT on_task_info_cancel() {
+    GtkWidget *task_info_window = GTK_WIDGET(gtk_builder_get_object(builder, "task_info_window"));
+    gtk_widget_hide(task_info_window);
 }
 
-void EXPORT on_edit_destroy(GtkWidget *widget, gpointer user_data)
+void EXPORT on_row_activated(gpointer user_data)
+{
+    GtkTreeView *tree_view = GTK_TREE_VIEW(user_data);
+    GtkTreeModel *model;
+    GtkTreeIter iter;
+
+    if (!get_selected_task(tree_view, &model, &iter)) {
+        return;
+    }
+
+    gchar *task;
+    gchar *due;
+    gchar *description;
+    gtk_tree_model_get(model, &iter, COLUMN_TASK, &task, COLUMN_DUE, &due, COLUMN_DESCRIPTION, &description, -1);
+
+    GtkWidget *task_info_window = GTK_WIDGET(gtk_builder_get_object(builder, "task_info_window"));
+    g_signal_connect(task_info_window, "destroy", G_CALLBACK(on_task_info_cancel), NULL);
+
+    GtkWidget *task_name_label = GTK_WIDGET(gtk_builder_get_object(builder, "task_info_name"));
+    gtk_label_set_text(GTK_LABEL(task_name_label), task);
+
+    GtkWidget *due_date_label = GTK_WIDGET(gtk_builder_get_object(builder, "task_info_due"));
+    gtk_label_set_text(GTK_LABEL(due_date_label), due);
+
+    GtkWidget *description_view = GTK_WIDGET(gtk_builder_get_object(builder, "description_view"));
+    GtkTextBuffer *buffer = gtk_text_view_get_buffer(GTK_TEXT_VIEW(description_view));
+    gtk_text_buffer_set_text(buffer, description, -1);
+
+    g_free(task);
+    g_free(due);
+    g_free(description);
+
+    gtk_widget_show_all(task_info_window);
+}
+
+void EXPORT on_update_cancel_button_clicked()
 {
     GtkWidget *update_task_window = GTK_WIDGET(gtk_builder_get_object(builder, "update_task_window"));
     gtk_widget_hide(update_task_window);
@@ -84,8 +122,7 @@ void EXPORT on_edit_button_clicked(GtkButton *button, gpointer user_data)
     gtk_tree_model_get(model, &iter, COLUMN_TASK, &task, COLUMN_DUE, &due, COLUMN_DESCRIPTION, &description, -1);
 
     GtkWidget *task_window = GTK_WIDGET(gtk_builder_get_object(builder, "update_task_window"));
-
-    g_signal_connect(task_window, "destroy", G_CALLBACK(on_edit_destroy), NULL);
+    g_signal_connect(task_window, "destroy", G_CALLBACK(on_update_cancel_button_clicked), NULL);
 
     GtkWidget *task_name_entry = GTK_WIDGET(gtk_builder_get_object(builder, "update_task_name_entry"));
     gtk_entry_set_text(GTK_ENTRY(task_name_entry), task);
@@ -499,6 +536,20 @@ int main(int argc, char *argv[])
 
     GtkWidget *task_cancel_button = GTK_WIDGET(gtk_builder_get_object(builder, "task_cancel_button"));
     g_signal_connect(task_cancel_button, "clicked", G_CALLBACK(on_task_cancel_button_clicked), NULL);
+
+    GtkWidget *task_info_cancel_button = GTK_WIDGET(gtk_builder_get_object(builder, "task_info_button"));
+    g_signal_connect(task_info_cancel_button, "clicked", G_CALLBACK(on_task_info_cancel), NULL);
+
+    GtkWidget *task_info_window = GTK_WIDGET(gtk_builder_get_object(builder, "task_info_window"));
+    g_signal_connect(task_info_window, "delete-event", G_CALLBACK(hide_on_delete), NULL);
+
+    GtkWidget *update_task_window = GTK_WIDGET(gtk_builder_get_object(builder, "update_task_window"));
+    g_signal_connect(update_task_window, "delete-event", G_CALLBACK(hide_on_delete), NULL);
+
+    GtkWidget *create_task_window = GTK_WIDGET(gtk_builder_get_object(builder, "task_window"));
+    g_signal_connect(create_task_window, "delete-event", G_CALLBACK(hide_on_delete), NULL);
+
+    g_signal_connect(tree_view, "row-activated", G_CALLBACK(on_row_activated), tree_view);
 
     g_signal_connect(window, "destroy", G_CALLBACK(on_main_window_destroy), NULL);
 
