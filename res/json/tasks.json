@@ -1,0 +1,29 @@
+{
+  "unfinished_tasks": [
+    {
+      "done": false,
+      "task": "Abgabe für Programming in C vorbereiten",
+      "due": "2024-07-01",
+      "description": "Abgabe für Programming in C vorbereiten"
+    },
+    {
+      "done": false,
+      "task": "Prepare presentation for programming in C",
+      "due": "2024-06-30",
+      "description": "Prepare presentation for programming in C"
+    },
+    {
+      "done": false,
+      "task": "Research C Project",
+      "due": "2024-06-30",
+      "description": "Research how GTK works"
+    },
+    {
+      "done": false,
+      "task": "Test",
+      "due": "2024-06-30",
+      "description": "test123"
+    }
+  ],
+  "finished_tasks": []
+}
