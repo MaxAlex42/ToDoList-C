@@ -14,15 +14,15 @@
     },
     {
       "done": false,
-      "task": "Research for new project",
-      "due": "2024-06-20",
-      "description": "Research for new project ideas"
+      "task": "Research C Project",
+      "due": "2024-06-30",
+      "description": "Research how GTK works"
     },
     {
       "done": false,
-      "task": "Projekt für Programming in C",
-      "due": "2024-07-01",
-      "description": "Projekt für Programming in C vorbereiten"
+      "task": "Test",
+      "due": "2024-06-30",
+      "description": "test123"
     }
   ],
   "finished_tasks": []
