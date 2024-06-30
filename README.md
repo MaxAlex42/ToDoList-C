@@ -17,7 +17,7 @@ This project is a simple todo application written using the GTK library and Glad
 - **Editing Tasks**: When double clicking a task it will open an edit dialog. There's also an additional edit button.
 - **Deleting Tasks**: Selecting and deleting tasks.
 - **Persistent storage**: Tasks will be stored into a json file that loads all the tasks and saves them when opening / closing the app.
-- 
+  
 ### Technologies Used
 - **[GTK](https://www.gtk.org/)**: A multi-platform toolkit for creating graphical user interfaces.
 - **[Glade](https://glade.gnome.org/)**: A RAD tool to enable quick and easy development of user interfaces for the GTK toolkit.
