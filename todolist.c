@@ -1,10 +1,10 @@
-#include <gtk/gtk.h>
-#include <jansson.h>
+#include <gtk/gtk.h> // GTK library for GUI components
+#include <jansson.h> // For JSON handling
 #include <time.h>
 #include <unistd.h>
 
-#define DATA_FILE "res/json/tasks.json"
-#define UI_FILE "res/ui/todo.glade"
+#define DATA_FILE "res/json/tasks.json" // path to persistent json file storeage
+#define UI_FILE "res/ui/todo.glade"     // path to glade file
 #define MAX_DESCRIPTION_LENGTH 255
 
 // Platform-specific macro for exporting symbols
@@ -15,8 +15,8 @@
 #endif
 
 /*
-    Enum to define the columns in the GtkListStore (ListView)
-    and holds the number of total columns
+    Enum to define the columns in the GtkListStore.
+    Additionaly holds the number of total columns
 */
 enum
 {
@@ -32,14 +32,16 @@ void save_tasks();
 void load_tasks();
 
 // Global variables
-GtkWidget *checkbox;               // Checkbox to filter completed todos  
-GtkWidget *edit_button;           //  Button to edit a todo                  
-GtkWidget *delete_button;        //   Button to delete a todo
-GtkListStore *unfinished_list;  // ListStore for unfinished tasks
+GtkWidget *checkbox;           // Checkbox to filter completed todos
+GtkWidget *edit_button;        //  Button to edit a todo
+GtkWidget *delete_button;      //   Button to delete a todo
+GtkListStore *unfinished_list; // ListStore for unfinished tasks
 GtkListStore *finished_list;   // ListStore for finished tasks
-GtkBuilder *builder;          // Builder object to load the UI from the Glade file
+GtkBuilder *builder;           // Builder object to load the UI from the Glade file
 
-gboolean hide_on_delete(GtkWidget *widget, GdkEvent *event, gpointer data) {
+// Function to hide a widget on delete event
+gboolean hide_on_delete(GtkWidget *widget, GdkEvent *event, gpointer data)
+{
     gtk_widget_hide(widget);
     return TRUE;
 }
@@ -51,39 +53,47 @@ void EXPORT on_main_window_destroy()
     gtk_main_quit(); // Quits the app
 }
 
+// Function to get the selected task from the tree view
 gboolean get_selected_task(GtkTreeView *tree_view, GtkTreeModel **model, GtkTreeIter *iter)
 {
-    GtkTreeSelection *selection = gtk_tree_view_get_selection(tree_view);
-    if (gtk_tree_selection_get_selected(selection, model, iter)) {
+    GtkTreeSelection *selection = gtk_tree_view_get_selection(tree_view); // Get the current selection from the tree view
+    if (gtk_tree_selection_get_selected(selection, model, iter))
+    {
         return TRUE;
     }
     return FALSE;
 }
 
-void EXPORT on_task_info_cancel() {
+// Callback function to hide the task info window
+void EXPORT on_task_info_cancel()
+{
     GtkWidget *task_info_window = GTK_WIDGET(gtk_builder_get_object(builder, "task_info_window"));
     gtk_widget_hide(task_info_window);
 }
 
+// Callback function for row activation in the tree view
 void EXPORT on_row_activated(gpointer user_data)
 {
-    GtkTreeView *tree_view = GTK_TREE_VIEW(user_data);
+    GtkTreeView *tree_view = GTK_TREE_VIEW(user_data); // Cast the user data to a GtkTreeView
     GtkTreeModel *model;
     GtkTreeIter iter;
 
-    if (!get_selected_task(tree_view, &model, &iter)) {
+    if (!get_selected_task(tree_view, &model, &iter))
+    {
         return;
     }
 
+    // Retrieve task information from the model
     gchar *task;
     gchar *due;
     gchar *description;
     gtk_tree_model_get(model, &iter, COLUMN_TASK, &task, COLUMN_DUE, &due, COLUMN_DESCRIPTION, &description, -1);
 
-    GtkWidget *task_info_window = GTK_WIDGET(gtk_builder_get_object(builder, "task_info_window"));
+    GtkWidget *task_info_window = GTK_WIDGET(gtk_builder_get_object(builder, "task_info_window")); // Get the update task window from the builder
     g_signal_connect(task_info_window, "destroy", G_CALLBACK(on_task_info_cancel), NULL);
 
-    GtkWidget *task_name_label = GTK_WIDGET(gtk_builder_get_object(builder, "task_info_name"));
+    // Set task information in the update task window
+    GtkWidget *task_name_label = GTK_WIDGET(gtk_builder_get_object(builder, "task_info_name")); // Get the task name entry from the builder
     gtk_label_set_text(GTK_LABEL(task_name_label), task);
 
     GtkWidget *due_date_label = GTK_WIDGET(gtk_builder_get_object(builder, "task_info_due"));
@@ -100,19 +110,22 @@ void EXPORT on_row_activated(gpointer user_data)
     gtk_widget_show_all(task_info_window);
 }
 
+// Callback function to hide the update task window when being canceled
 void EXPORT on_update_cancel_button_clicked()
 {
     GtkWidget *update_task_window = GTK_WIDGET(gtk_builder_get_object(builder, "update_task_window"));
     gtk_widget_hide(update_task_window);
 }
 
+// Callback function for the edit button
 void EXPORT on_edit_button_clicked(GtkButton *button, gpointer user_data)
 {
     GtkTreeView *tree_view = GTK_TREE_VIEW(user_data);
     GtkTreeModel *model;
     GtkTreeIter iter;
 
-    if (!get_selected_task(tree_view, &model, &iter)) {
+    if (!get_selected_task(tree_view, &model, &iter))
+    {
         return; // No task selected
     }
 
@@ -150,7 +163,8 @@ void EXPORT on_delete_button_clicked(GtkButton *button, gpointer user_data)
     GtkTreeModel *model;
     GtkTreeIter iter;
 
-    if (get_selected_task(tree_view, &model, &iter)) {
+    if (get_selected_task(tree_view, &model, &iter))
+    {
         gtk_list_store_remove(GTK_LIST_STORE(model), &iter);
     }
 }
@@ -169,13 +183,14 @@ void add_todo_item(GtkListStore *list, gboolean done, const gchar *task, const g
 }
 
 void EXPORT on_update_button_clicked(GtkButton *button, gpointer user_data)
-{    
+{
     GtkTreeView *tree_view = GTK_TREE_VIEW(user_data);
     GtkTreeModel *model;
     GtkTreeIter iter;
 
     // Remove old task from the list store
-    if (get_selected_task(tree_view, &model, &iter)) {
+    if (get_selected_task(tree_view, &model, &iter))
+    {
         gtk_list_store_remove(GTK_LIST_STORE(model), &iter);
     }
 
@@ -198,7 +213,7 @@ void EXPORT on_update_button_clicked(GtkButton *button, gpointer user_data)
     gboolean done = FALSE;
 
     // Update the task in the list store
-    //update_todo_item(GTK_LIST_STORE(model), done, task_name, due_date, description);
+    // update_todo_item(GTK_LIST_STORE(model), done, task_name, due_date, description);
     add_todo_item(unfinished_list, done, task_name, due_date, description);
 
     g_free(description);
@@ -208,13 +223,16 @@ void EXPORT on_update_button_clicked(GtkButton *button, gpointer user_data)
     gtk_widget_hide(update_task_window);
 }
 
-void on_insert_text(GtkTextBuffer *buffer, GtkTextIter *location, gchar *text, gint len, gpointer data) {
+// Function to limit the description length in the text buffer
+void on_insert_text(GtkTextBuffer *buffer, GtkTextIter *location, gchar *text, gint len, gpointer data)
+{
     GtkTextIter start, end;
     gtk_text_buffer_get_bounds(buffer, &start, &end);
     gchar *current_text = gtk_text_buffer_get_text(buffer, &start, &end, FALSE);
-    
-    if (g_utf8_strlen(current_text, -1) + g_utf8_strlen(text, -1) > MAX_DESCRIPTION_LENGTH) {
-        g_signal_stop_emission_by_name(buffer, "insert-text");
+
+    if (g_utf8_strlen(current_text, -1) + g_utf8_strlen(text, -1) > MAX_DESCRIPTION_LENGTH)
+    {
+        g_signal_stop_emission_by_name(buffer, "insert-text"); // Stop the insertion of new text
     }
 
     g_free(current_text);
@@ -279,7 +297,7 @@ void EXPORT on_toggled(GtkCellRendererToggle *renderer, gchar *path, gpointer us
 }
 
 // Function to handle the response of the task window buttons
-void EXPORT on_task_ok_button_clicked(GtkButton *button, gpointer user_data) 
+void EXPORT on_task_ok_button_clicked(GtkButton *button, gpointer user_data)
 {
     // Get the task name and due date from the window
     GtkWidget *task_name_entry = GTK_WIDGET(gtk_builder_get_object(builder, "task_name_entry"));
@@ -314,7 +332,8 @@ void EXPORT on_task_cancel_button_clicked(GtkButton *button, gpointer user_data)
 }
 
 // Function to show the task window
-void EXPORT on_floating_button_clicked(GtkButton *button, gpointer user_data) {
+void EXPORT on_floating_button_clicked(GtkButton *button, gpointer user_data)
+{
     GtkWidget *task_window = GTK_WIDGET(gtk_builder_get_object(builder, "task_window"));
 
     // Reset the task name entry
@@ -331,10 +350,10 @@ void EXPORT on_floating_button_clicked(GtkButton *button, gpointer user_data) {
     // Get the text view and its buffer
     GtkWidget *description_view = GTK_WIDGET(gtk_builder_get_object(builder, "task_description_entry"));
     GtkTextBuffer *buffer = gtk_text_view_get_buffer(GTK_TEXT_VIEW(description_view));
-    
+
     // Disconnect any existing handler to avoid multiple connections
     g_signal_handlers_disconnect_by_func(buffer, G_CALLBACK(on_insert_text), NULL);
-    
+
     // Connect the "insert-text" signal to the buffer
     g_signal_connect(buffer, "insert-text", G_CALLBACK(on_insert_text), NULL);
 
@@ -345,7 +364,8 @@ void EXPORT on_floating_button_clicked(GtkButton *button, gpointer user_data) {
 }
 
 // Function to save the tasks to a JSON file
-void save_tasks() {
+void save_tasks()
+{
     json_t *root = json_object();
     json_t *unfinished_tasks = json_array();
     json_t *finished_tasks = json_array();
@@ -353,7 +373,8 @@ void save_tasks() {
 
     // Save unfinished tasks
     gboolean valid = gtk_tree_model_get_iter_first(GTK_TREE_MODEL(unfinished_list), &iter);
-    while (valid) {
+    while (valid)
+    {
         gboolean done;
         gchar *task;
         gchar *due;
@@ -379,7 +400,8 @@ void save_tasks() {
 
     // Save finished tasks
     valid = gtk_tree_model_get_iter_first(GTK_TREE_MODEL(finished_list), &iter);
-    while (valid) {
+    while (valid)
+    {
         gboolean done;
         gchar *task;
         gchar *due;
@@ -404,8 +426,9 @@ void save_tasks() {
     json_object_set_new(root, "finished_tasks", finished_tasks);
 
     // Save to file
-    if (json_dump_file(root, DATA_FILE, JSON_INDENT(2)) != 0) {
-    g_warning("Failed to save tasks to file");
+    if (json_dump_file(root, DATA_FILE, JSON_INDENT(2)) != 0)
+    {
+        g_warning("Failed to save tasks to file");
     }
     json_decref(root);
 }
@@ -486,7 +509,6 @@ int main(int argc, char *argv[])
     unfinished_list = gtk_list_store_new(NUM_COLUMNS, G_TYPE_BOOLEAN, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_STRING);
     finished_list = gtk_list_store_new(NUM_COLUMNS, G_TYPE_BOOLEAN, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_STRING);
 
-
     // Initially set the tree view model to the unfinished tasks list
     gtk_tree_view_set_model(tree_view, GTK_TREE_MODEL(unfinished_list));
 
@@ -517,12 +539,15 @@ int main(int argc, char *argv[])
     GtkWidget *edit_button = GTK_WIDGET(gtk_builder_get_object(builder, "edit_button"));
     g_signal_connect(edit_button, "clicked", G_CALLBACK(on_edit_button_clicked), tree_view);
 
+    // Connect the update Button with its window
     GtkWidget *update_button = GTK_WIDGET(gtk_builder_get_object(builder, "update_task_button"));
     g_signal_connect(update_button, "clicked", G_CALLBACK(on_update_button_clicked), tree_view);
 
+    // Connect the cancel Button in the update view to is window
     GtkWidget *update_cancel_button = GTK_WIDGET(gtk_builder_get_object(builder, "update_task_cancel_button"));
     g_signal_connect(update_cancel_button, "clicked", G_CALLBACK(on_update_cancel_button_clicked), NULL);
 
+    // Connect the delete Button with its window
     GtkWidget *delete_button = GTK_WIDGET(gtk_builder_get_object(builder, "delete_button"));
     g_signal_connect(delete_button, "clicked", G_CALLBACK(on_delete_button_clicked), tree_view);
 
