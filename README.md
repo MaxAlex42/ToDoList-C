@@ -13,7 +13,11 @@ This project is a simple todo application written using the GTK library and Glad
 - **Add Todo Items**: Users can add new tasks to the todo list.
 - **Mark Tasks as Done**: Users can mark tasks as completed by toggling a checkbox.
 - **Task List View**: Tasks are displayed in a list view, showing both the task description and its completion status.
-
+- **Seperate List Views**: When clicking a checkbox you can choose between listing only done todos or active ones.
+- **Editing Tasks**: When double clicking a task it will open an edit dialog. There's also an additional edit button.
+- **Deleting Tasks**: Selecting and deleting tasks.
+- **Persistent storage**: Tasks will be stored into a json file that loads all the tasks and saves them when opening / closing the app.
+- 
 ### Technologies Used
 - **[GTK](https://www.gtk.org/)**: A multi-platform toolkit for creating graphical user interfaces.
 - **[Glade](https://glade.gnome.org/)**: A RAD tool to enable quick and easy development of user interfaces for the GTK toolkit.
@@ -21,6 +25,7 @@ This project is a simple todo application written using the GTK library and Glad
 ### Files in the Project
 - `todo.glade`: The Glade file defining the UI layout for the todo app.
 - `todo.c`: The C source file containing the logic for the todo application.
+- `tasks.json`: Containing the tasks a user has entered that will be loaded and saved.
 
 ### How to Compile and Run
 1. Ensure you have GTK 3 and Glade installed on your system.
@@ -38,3 +43,5 @@ This project is a simple todo application written using the GTK library and Glad
    ```sh
    ./ToDoList
    ```
+
+Theres also a shell script you can run additionally.
